@@ -21,7 +21,7 @@ async function checkSessionAndProtectRoute(isLoginPage) {
       const parsed = JSON.parse(customSession);
       if (parsed && parsed.email) {
         if (isLoginPage) {
-          window.location.href = 'index.html';
+          window.location.replace('index.html');
           return;
         } else {
           displayUserInfo({ email: parsed.email });
@@ -31,34 +31,26 @@ async function checkSessionAndProtectRoute(isLoginPage) {
     }
 
     const client = getSupabase();
-    if (!client) {
-      if (!isLoginPage && !customSession) {
-        window.location.href = 'login.html';
+    if (client) {
+      const { data: { session } } = await client.auth.getSession();
+      if (session && session.user) {
+        localStorage.setItem('app_session', JSON.stringify({ email: session.user.email }));
+        if (isLoginPage) {
+          window.location.replace('index.html');
+          return;
+        } else {
+          displayUserInfo(session.user);
+          return;
+        }
       }
-      return;
     }
 
-    const { data: { session }, error } = await client.auth.getSession();
-
-    if (error) {
-      console.warn('Session check:', error.message);
-    }
-
-    if (session && session.user) {
-      if (isLoginPage) {
-        window.location.href = 'index.html';
-      } else {
-        displayUserInfo(session.user);
-      }
-    } else {
-      if (!isLoginPage && !customSession) {
-        window.location.href = 'login.html';
-      }
+    if (!isLoginPage) {
+      window.location.replace('login.html');
     }
   } catch (err) {
-    console.error('Authentication check failed:', err);
     if (!isLoginPage) {
-      window.location.href = 'login.html';
+      window.location.replace('login.html');
     }
   }
 }
@@ -144,7 +136,7 @@ function setupLoginForm() {
       localStorage.setItem('app_session', JSON.stringify({ email: 'admin@gmail.com', role: 'admin' }));
       displayAlert(loginAlert, 'Login successful! Redirecting to dashboard...', 'success');
       setTimeout(() => {
-        window.location.href = 'index.html';
+        window.location.replace('index.html');
       }, 500);
       return;
     }
@@ -167,7 +159,7 @@ function setupLoginForm() {
       localStorage.setItem('app_session', JSON.stringify({ email: email, role: 'custodian' }));
       displayAlert(loginAlert, 'Login successful! Redirecting to dashboard...', 'success');
       setTimeout(() => {
-        window.location.href = 'index.html';
+        window.location.replace('index.html');
       }, 600);
 
     } catch (err) {
@@ -249,7 +241,7 @@ function setupRegisterForm() {
         localStorage.setItem('app_session', JSON.stringify({ email: email, role: 'custodian' }));
         displayAlert(loginAlert, 'Registration successful! Redirecting to dashboard...', 'success');
         setTimeout(() => {
-          window.location.href = 'index.html';
+          window.location.replace('index.html');
         }, 800);
       } else {
         displayAlert(loginAlert, `Account created for ${email}! You can now sign in.`, 'success');
@@ -289,7 +281,7 @@ function setupLogoutButton() {
       } catch (err) {
         console.error('Logout error:', err);
       } finally {
-        window.location.href = 'login.html';
+        window.location.replace('login.html');
       }
     });
   }
