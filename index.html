@@ -479,6 +479,8 @@
       document.getElementById('sidebar').classList.remove('open');
     }
 
+    window.switchTab = switchTab;
+
     document.querySelectorAll('.nav-link[data-tab]').forEach(link => {
       link.addEventListener('click', (e) => {
         e.preventDefault();

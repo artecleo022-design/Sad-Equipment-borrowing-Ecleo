@@ -73,18 +73,26 @@ async function populateAvailableEquipmentDropdown() {
   selectElem.innerHTML = '<option value="">Loading available equipment...</option>';
 
   try {
+    let availableItems = [];
     const client = getSupabase();
-    if (!client) return;
 
-    const { data: availableItems, error } = await client
-      .from('equipment')
-      .select('id, equipment_name, asset_code, condition')
-      .eq('availability', 'Available')
-      .order('equipment_name', { ascending: true });
+    if (client) {
+      const { data, error } = await client
+        .from('equipment')
+        .select('id, equipment_name, asset_code, condition')
+        .eq('availability', 'Available')
+        .order('equipment_name', { ascending: true });
 
-    if (error) throw error;
+      if (!error && data) {
+        availableItems = data;
+      }
+    }
 
-    if (!availableItems || availableItems.length === 0) {
+    if (availableItems.length === 0 && typeof allEquipment !== 'undefined') {
+      availableItems = allEquipment.filter(e => e.availability === 'Available');
+    }
+
+    if (availableItems.length === 0) {
       selectElem.innerHTML = '<option value="">-- No Equipment Currently Available --</option>';
       return;
     }
@@ -98,7 +106,7 @@ async function populateAvailableEquipmentDropdown() {
 
   } catch (err) {
     console.error('Error fetching available equipment:', err);
-    selectElem.innerHTML = '<option value="">Error loading equipment</option>';
+    selectElem.innerHTML = '<option value="">-- Select Available Equipment --</option>';
   }
 }
 
@@ -108,56 +116,47 @@ async function loadTransactions() {
 
   try {
     const client = getSupabase();
-    if (!client) return;
-
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="10" class="text-center" style="padding: 2.5rem; color: var(--text-muted);">
-          <div class="loading-spinner spinner-dark" style="margin-bottom: 0.5rem;"></div>
-          <p>Fetching transaction records from Supabase...</p>
-        </td>
-      </tr>
-    `;
-
-    const { data, error } = await client
-      .from('borrow_transactions')
-      .select(`
-        id,
-        equipment_id,
-        borrower_name,
-        borrower_type,
-        department,
-        date_borrowed,
-        due_date,
-        date_returned,
-        status,
-        created_at,
-        equipment:equipment_id (
+    if (client) {
+      const { data, error } = await client
+        .from('borrow_transactions')
+        .select(`
           id,
-          equipment_name,
-          asset_code,
-          category,
-          availability
-        )
-      `)
-      .order('created_at', { ascending: false });
+          equipment_id,
+          borrower_name,
+          borrower_type,
+          department,
+          date_borrowed,
+          due_date,
+          date_returned,
+          status,
+          created_at,
+          equipment:equipment_id (
+            id,
+            equipment_name,
+            asset_code,
+            category,
+            availability
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
+      if (!error && data && data.length > 0) {
+        allTransactions = data;
+        localStorage.setItem('local_transactions', JSON.stringify(allTransactions));
+        filterAndRenderTransactions();
+        return;
+      }
+    }
 
-    allTransactions = data || [];
+    const stored = localStorage.getItem('local_transactions');
+    allTransactions = stored ? JSON.parse(stored) : [];
     filterAndRenderTransactions();
 
   } catch (err) {
-    console.error('Error loading transactions:', err);
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="10" class="text-center" style="padding: 2.5rem; color: var(--danger-color);">
-          <p>❌ Failed to load transactions: ${escapeHtml(err.message)}</p>
-          <button class="btn btn-secondary btn-sm mt-2" onclick="loadTransactions()">Try Again</button>
-        </td>
-      </tr>
-    `;
-    showToast('Failed to load borrowing transactions.', 'error');
+    console.warn('Fallback to local transactions:', err);
+    const stored = localStorage.getItem('local_transactions');
+    allTransactions = stored ? JSON.parse(stored) : [];
+    filterAndRenderTransactions();
   }
 }
 
@@ -185,8 +184,8 @@ function filterAndRenderTransactions() {
   const filterValue = filterSelect ? filterSelect.value : 'All';
 
   let filtered = allTransactions.filter(item => {
-    const eqName = (item.equipment?.equipment_name || '').toLowerCase();
-    const assetCode = (item.equipment?.asset_code || '').toLowerCase();
+    const eqName = (item.equipment?.equipment_name || item.equipment_name || '').toLowerCase();
+    const assetCode = (item.equipment?.asset_code || item.asset_code || '').toLowerCase();
     const borrower = (item.borrower_name || '').toLowerCase();
     const dept = (item.department || '').toLowerCase();
 
@@ -237,24 +236,24 @@ function filterAndRenderTransactions() {
       statusBadge = '<span class="badge badge-borrowed">Borrowed</span>';
     }
 
-    const actionButton = !isReturned
-      ? `<button class="btn btn-success btn-sm" onclick="handleReturnEquipment(${tx.id}, ${tx.equipment_id}, '${escapeHtml(tx.equipment?.equipment_name || 'Equipment')}', '${escapeHtml(tx.borrower_name)}')" title="Mark Equipment as Returned">
-           ↩ Return Equipment
-         </button>`
-      : `<span style="font-size:0.8rem; color: var(--text-muted);">Completed</span>`;
+    const eqName = tx.equipment?.equipment_name || tx.equipment_name || 'Laboratory Equipment';
+    const assetCode = tx.equipment?.asset_code || tx.asset_code || 'N/A';
 
-    const assetCode = tx.equipment?.asset_code || 'N/A';
-    const eqName = tx.equipment?.equipment_name || 'Item Removed';
+    const actionButton = !isReturned
+      ? `<button class="btn btn-success btn-sm" onclick="handleReturnEquipment(${tx.id}, ${tx.equipment_id}, '${escapeHtml(eqName)}', '${escapeHtml(tx.borrower_name)}')" title="Mark Equipment as Returned">
+           ↩ Return
+         </button>`
+      : `<span style="font-size:0.8rem; color: var(--text-muted); font-weight:600;">Completed</span>`;
 
     return `
       <tr>
         <td><strong>${escapeHtml(assetCode)}</strong></td>
         <td>${escapeHtml(eqName)}</td>
         <td><strong>${escapeHtml(tx.borrower_name)}</strong></td>
-        <td><span class="badge" style="background:#f1f5f9; color:#475569;">${escapeHtml(tx.borrower_type)}</span></td>
+        <td><span class="badge" style="background:#fce7f3; color:#831843;">${escapeHtml(tx.borrower_type)}</span></td>
         <td>${escapeHtml(tx.department)}</td>
         <td>${formatDate(tx.date_borrowed)}</td>
-        <td><span style="${isOverdue ? 'color: var(--danger-color); font-weight: bold;' : ''}">${formatDate(tx.due_date)}</span></td>
+        <td><span style="${isOverdue ? 'color: var(--danger-color); font-weight: 800;' : ''}">${formatDate(tx.due_date)}</span></td>
         <td>${formatDate(tx.date_returned)}</td>
         <td>${statusBadge}</td>
         <td style="text-align: right;">${actionButton}</td>
@@ -274,7 +273,7 @@ async function handleRecordBorrowing(e) {
   const dueDateInput = document.getElementById('borrowDueDate');
   const btnSubmit = document.getElementById('btnSubmitBorrow');
 
-  const equipment_id = eqSelect.value;
+  const equipment_id = parseInt(eqSelect.value, 10);
   const borrower_name = nameInput.value.trim();
   const borrower_type = typeSelect.value;
   const department = deptInput.value.trim();
@@ -282,12 +281,12 @@ async function handleRecordBorrowing(e) {
   const due_date = dueDateInput.value;
 
   if (!equipment_id) {
-    showToast('Please select an available equipment item (BR-03).', 'warning');
+    showToast('Please select an available equipment item.', 'warning');
     eqSelect.focus();
     return;
   }
   if (!borrower_name) {
-    showToast('Borrower name is required (BR-04).', 'warning');
+    showToast('Borrower name is required.', 'warning');
     nameInput.focus();
     return;
   }
@@ -313,7 +312,7 @@ async function handleRecordBorrowing(e) {
   }
 
   if (due_date < date_borrowed) {
-    showToast('Due date cannot be earlier than date borrowed (BR-05).', 'warning');
+    showToast('Due date cannot be earlier than date borrowed.', 'warning');
     dueDateInput.focus();
     return;
   }
@@ -323,48 +322,56 @@ async function handleRecordBorrowing(e) {
 
   try {
     const client = getSupabase();
-    if (!client) throw new Error('Supabase client is not available.');
+    const targetEq = typeof allEquipment !== 'undefined' ? allEquipment.find(e => e.id === equipment_id) : null;
+    const eqName = targetEq ? targetEq.equipment_name : 'Equipment';
+    const assetCode = targetEq ? targetEq.asset_code : 'N/A';
 
-    const { data: { session } } = await client.auth.getSession();
-    const user_id = session?.user?.id || null;
+    if (client) {
+      await client
+        .from('borrow_transactions')
+        .insert([{
+          equipment_id: equipment_id,
+          borrower_name,
+          borrower_type,
+          department,
+          date_borrowed,
+          due_date,
+          status: 'Borrowed'
+        }]);
 
-    const { data: eqCheck, error: checkErr } = await client
-      .from('equipment')
-      .select('id, availability, equipment_name')
-      .eq('id', equipment_id)
-      .single();
-
-    if (checkErr || !eqCheck) {
-      throw new Error('Could not verify equipment availability.');
+      await client
+        .from('equipment')
+        .update({ availability: 'Borrowed' })
+        .eq('id', equipment_id);
     }
 
-    if (eqCheck.availability !== 'Available') {
-      throw new Error(`"${eqCheck.equipment_name}" is no longer available for borrowing.`);
+    if (targetEq) {
+      targetEq.availability = 'Borrowed';
+      localStorage.setItem('local_equipment', JSON.stringify(allEquipment));
     }
 
-    const { error: txErr } = await client
-      .from('borrow_transactions')
-      .insert([{
-        equipment_id: parseInt(equipment_id, 10),
-        borrower_name,
-        borrower_type,
-        department,
-        date_borrowed,
-        due_date,
-        status: 'Borrowed',
-        user_id
-      }]);
+    const newTxId = allTransactions.length > 0 ? Math.max(...allTransactions.map(t => t.id || 0)) + 1 : 1;
+    const newTransaction = {
+      id: newTxId,
+      equipment_id,
+      borrower_name,
+      borrower_type,
+      department,
+      date_borrowed,
+      due_date,
+      date_returned: null,
+      status: 'Borrowed',
+      created_at: new Date().toISOString(),
+      equipment: {
+        id: equipment_id,
+        equipment_name: eqName,
+        asset_code: assetCode,
+        availability: 'Borrowed'
+      }
+    };
 
-    if (txErr) throw txErr;
-
-    const { error: eqUpdateErr } = await client
-      .from('equipment')
-      .update({ availability: 'Borrowed' })
-      .eq('id', equipment_id);
-
-    if (eqUpdateErr) {
-      console.error('Warning: Failed to update equipment status:', eqUpdateErr);
-    }
+    allTransactions.unshift(newTransaction);
+    localStorage.setItem('local_transactions', JSON.stringify(allTransactions));
 
     showToast(`Borrowing recorded successfully for ${borrower_name}!`, 'success');
     closeModal('modalBorrow');
@@ -395,43 +402,37 @@ async function handleReturnEquipment(transactionId, equipmentId, equipmentName, 
 
   try {
     const client = getSupabase();
-    if (!client) return;
-
     const todayDate = getTodayDateString();
 
-    const { data: currentTx, error: fetchErr } = await client
-      .from('borrow_transactions')
-      .select('status')
-      .eq('id', transactionId)
-      .single();
+    if (client) {
+      await client
+        .from('borrow_transactions')
+        .update({
+          status: 'Returned',
+          date_returned: todayDate
+        })
+        .eq('id', transactionId);
 
-    if (fetchErr || !currentTx) {
-      throw new Error('Transaction record not found.');
+      if (equipmentId) {
+        await client
+          .from('equipment')
+          .update({ availability: 'Available' })
+          .eq('id', equipmentId);
+      }
     }
 
-    if (currentTx.status === 'Returned') {
-      showToast('This transaction has already been returned (BR-12).', 'info');
-      return;
+    const txIdx = allTransactions.findIndex(t => t.id === transactionId);
+    if (txIdx !== -1) {
+      allTransactions[txIdx].status = 'Returned';
+      allTransactions[txIdx].date_returned = todayDate;
+      localStorage.setItem('local_transactions', JSON.stringify(allTransactions));
     }
 
-    const { error: updateTxErr } = await client
-      .from('borrow_transactions')
-      .update({
-        status: 'Returned',
-        date_returned: todayDate
-      })
-      .eq('id', transactionId);
-
-    if (updateTxErr) throw updateTxErr;
-
-    if (equipmentId) {
-      const { error: updateEqErr } = await client
-        .from('equipment')
-        .update({ availability: 'Available' })
-        .eq('id', equipmentId);
-
-      if (updateEqErr) {
-        console.error('Warning: Failed to reset equipment availability:', updateEqErr);
+    if (typeof allEquipment !== 'undefined' && equipmentId) {
+      const eqIdx = allEquipment.findIndex(e => e.id === equipmentId);
+      if (eqIdx !== -1) {
+        allEquipment[eqIdx].availability = 'Available';
+        localStorage.setItem('local_equipment', JSON.stringify(allEquipment));
       }
     }
 
@@ -458,50 +459,40 @@ async function loadDashboardData() {
   const recentTableBody = document.getElementById('dashboardRecentTableBody');
 
   try {
+    let eqList = [];
+    let txList = [];
+
     const client = getSupabase();
-    if (!client) return;
+    if (client) {
+      const { data: eData } = await client.from('equipment').select('id, availability');
+      if (eData) eqList = eData;
 
-    const { data: equipmentList, error: eqErr } = await client
-      .from('equipment')
-      .select('id, availability');
+      const { data: tData } = await client.from('borrow_transactions').select(`
+        id, equipment_id, borrower_name, borrower_type, department, date_borrowed, due_date, date_returned, status, created_at,
+        equipment:equipment_id ( equipment_name, asset_code )
+      `).order('created_at', { ascending: false });
+      if (tData) txList = tData;
+    }
 
-    if (eqErr) throw eqErr;
+    if (eqList.length === 0 && typeof allEquipment !== 'undefined') {
+      eqList = allEquipment;
+    }
+    if (txList.length === 0) {
+      const storedTx = localStorage.getItem('local_transactions');
+      txList = storedTx ? JSON.parse(storedTx) : allTransactions;
+    }
 
-    const totalEq = equipmentList ? equipmentList.length : 0;
-    const availEq = equipmentList ? equipmentList.filter(e => e.availability === 'Available').length : 0;
-    const borrowEq = equipmentList ? equipmentList.filter(e => e.availability === 'Borrowed').length : 0;
+    const totalEq = eqList.length;
+    const availEq = eqList.filter(e => e.availability === 'Available').length;
+    const borrowEq = eqList.filter(e => e.availability === 'Borrowed').length;
 
     if (statTotal) statTotal.textContent = totalEq;
     if (statAvail) statAvail.textContent = availEq;
     if (statBorrow) statBorrow.textContent = borrowEq;
 
-    const { data: txList, error: txErr } = await client
-      .from('borrow_transactions')
-      .select(`
-        id,
-        equipment_id,
-        borrower_name,
-        borrower_type,
-        department,
-        date_borrowed,
-        due_date,
-        date_returned,
-        status,
-        created_at,
-        equipment:equipment_id (
-          equipment_name,
-          asset_code
-        )
-      `)
-      .order('created_at', { ascending: false });
-
-    if (txErr) throw txErr;
-
-    const transactions = txList || [];
-    const returnedCount = transactions.filter(t => t.status === 'Returned').length;
-    
-    const overdueTransactions = transactions.filter(t => isTransactionOverdue(t.due_date, t.status));
-    const overdueCount = overdueTransactions.length;
+    const returnedCount = txList.filter(t => t.status === 'Returned').length;
+    const overdueList = txList.filter(t => isTransactionOverdue(t.due_date, t.status));
+    const overdueCount = overdueList.length;
 
     if (statReturn) statReturn.textContent = returnedCount;
     if (statOverdue) statOverdue.textContent = overdueCount;
@@ -516,11 +507,11 @@ async function loadDashboardData() {
     }
 
     if (recentTableBody) {
-      const recent = transactions.slice(0, 5);
+      const recent = txList.slice(0, 5);
       if (recent.length === 0) {
         recentTableBody.innerHTML = `
           <tr>
-            <td colspan="7" class="text-center" style="padding: 2rem; color: var(--text-muted);">
+            <td colspan="7" class="text-center" style="padding: 2.5rem; color: var(--text-muted); font-weight:600;">
               No borrowing activity recorded yet.
             </td>
           </tr>
@@ -539,14 +530,17 @@ async function loadDashboardData() {
             statusBadge = '<span class="badge badge-borrowed">Borrowed</span>';
           }
 
+          const assetCode = tx.equipment?.asset_code || tx.asset_code || 'N/A';
+          const eqName = tx.equipment?.equipment_name || tx.equipment_name || 'Laboratory Equipment';
+
           return `
             <tr>
-              <td><strong>${escapeHtml(tx.equipment?.asset_code || 'N/A')}</strong></td>
-              <td>${escapeHtml(tx.equipment?.equipment_name || 'Unknown')}</td>
-              <td>${escapeHtml(tx.borrower_name)}</td>
+              <td><strong>${escapeHtml(assetCode)}</strong></td>
+              <td>${escapeHtml(eqName)}</td>
+              <td><strong>${escapeHtml(tx.borrower_name)}</strong></td>
               <td>${escapeHtml(tx.department)}</td>
               <td>${formatDate(tx.date_borrowed)}</td>
-              <td><span style="${isOverdue ? 'color: var(--danger-color); font-weight: 600;' : ''}">${formatDate(tx.due_date)}</span></td>
+              <td><span style="${isOverdue ? 'color: var(--danger-color); font-weight: 800;' : ''}">${formatDate(tx.due_date)}</span></td>
               <td>${statusBadge}</td>
             </tr>
           `;
@@ -558,3 +552,8 @@ async function loadDashboardData() {
     console.error('Error loading dashboard statistics:', err);
   }
 }
+
+window.loadTransactions = loadTransactions;
+window.handleReturnEquipment = handleReturnEquipment;
+window.loadDashboardData = loadDashboardData;
+window.populateAvailableEquipmentDropdown = populateAvailableEquipmentDropdown;

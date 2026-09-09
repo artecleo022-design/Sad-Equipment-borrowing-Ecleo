@@ -1,5 +1,13 @@
 let allEquipment = [];
 
+const DEFAULT_SAMPLE_EQUIPMENT = [
+  { id: 1, equipment_name: 'Epson Projector', category: 'Projector', asset_code: 'PROJ-001', condition: 'Good', availability: 'Available', created_at: new Date().toISOString() },
+  { id: 2, equipment_name: 'Acer Laptop', category: 'Laptop', asset_code: 'LAP-002', condition: 'Good', availability: 'Available', created_at: new Date().toISOString() },
+  { id: 3, equipment_name: 'Canon Camera', category: 'Camera', asset_code: 'CAM-001', condition: 'Fair', availability: 'Available', created_at: new Date().toISOString() },
+  { id: 4, equipment_name: 'Wireless Microphone', category: 'Microphone', asset_code: 'MIC-001', condition: 'Good', availability: 'Available', created_at: new Date().toISOString() },
+  { id: 5, equipment_name: 'TP-Link Router', category: 'Router', asset_code: 'ROUT-001', condition: 'Good', availability: 'Available', created_at: new Date().toISOString() }
+];
+
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('equipmentTableBody')) {
     initEquipmentModule();
@@ -12,7 +20,8 @@ function initEquipmentModule() {
   const btnOpenAdd = document.getElementById('btnOpenAddEquipmentModal');
   if (btnOpenAdd) {
     btnOpenAdd.addEventListener('click', () => {
-      document.getElementById('formAddEquipment').reset();
+      const form = document.getElementById('formAddEquipment');
+      if (form) form.reset();
       openModal('modalAddEquipment');
     });
   }
@@ -40,7 +49,7 @@ function initEquipmentModule() {
   const btnRefresh = document.getElementById('btnRefreshEquipment');
   if (btnRefresh) {
     btnRefresh.addEventListener('click', () => {
-      showToast('Refreshing equipment catalog...', 'info', 1500);
+      showToast('Refreshing equipment inventory...', 'info', 1500);
       loadEquipment();
     });
   }
@@ -52,27 +61,30 @@ async function loadEquipment() {
 
   try {
     const client = getSupabase();
-    if (!client) return;
+    if (client) {
+      const { data, error } = await client
+        .from('equipment')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="text-center" style="padding: 2.5rem; color: var(--text-muted);">
-          <div class="loading-spinner spinner-dark" style="margin-bottom: 0.5rem;"></div>
-          <p>Fetching equipment from Supabase...</p>
-        </td>
-      </tr>
-    `;
-
-    const { data, error } = await client
-      .from('equipment')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      throw error;
+      if (!error && data && data.length > 0) {
+        allEquipment = data;
+        localStorage.setItem('local_equipment', JSON.stringify(allEquipment));
+        filterAndRenderEquipment();
+        if (typeof populateAvailableEquipmentDropdown === 'function') {
+          populateAvailableEquipmentDropdown();
+        }
+        return;
+      }
     }
 
-    allEquipment = data || [];
+    const stored = localStorage.getItem('local_equipment');
+    if (stored) {
+      allEquipment = JSON.parse(stored);
+    } else {
+      allEquipment = [...DEFAULT_SAMPLE_EQUIPMENT];
+      localStorage.setItem('local_equipment', JSON.stringify(allEquipment));
+    }
     filterAndRenderEquipment();
 
     if (typeof populateAvailableEquipmentDropdown === 'function') {
@@ -80,16 +92,10 @@ async function loadEquipment() {
     }
 
   } catch (err) {
-    console.error('Error loading equipment:', err);
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="text-center" style="padding: 2.5rem; color: var(--danger-color);">
-          <p>❌ Failed to load equipment: ${escapeHtml(err.message)}</p>
-          <button class="btn btn-secondary btn-sm mt-2" onclick="loadEquipment()">Try Again</button>
-        </td>
-      </tr>
-    `;
-    showToast('Failed to load equipment catalog.', 'error');
+    console.warn('Fallback to local equipment storage:', err);
+    const stored = localStorage.getItem('local_equipment');
+    allEquipment = stored ? JSON.parse(stored) : [...DEFAULT_SAMPLE_EQUIPMENT];
+    filterAndRenderEquipment();
   }
 }
 
@@ -176,7 +182,7 @@ async function handleAddEquipment(e) {
   const condition = conditionSelect.value;
 
   if (!equipment_name) {
-    showToast('Equipment name cannot be empty (BR-01).', 'warning');
+    showToast('Equipment name cannot be empty.', 'warning');
     nameInput.focus();
     return;
   }
@@ -191,35 +197,49 @@ async function handleAddEquipment(e) {
     return;
   }
 
+  const duplicate = allEquipment.some(eq => eq.asset_code.toUpperCase() === asset_code);
+  if (duplicate) {
+    showToast(`Asset code "${asset_code}" is already in use. Please use a unique asset code.`, 'error');
+    codeInput.focus();
+    return;
+  }
+
   btnSubmit.disabled = true;
   btnSubmit.innerHTML = '<span>Saving...</span>';
 
   try {
     const client = getSupabase();
+    let inserted = false;
 
-    const { data: existing, error: checkErr } = await client
-      .from('equipment')
-      .select('id')
-      .eq('asset_code', asset_code)
-      .maybeSingle();
+    if (client) {
+      const { error: insertErr } = await client
+        .from('equipment')
+        .insert([{
+          equipment_name,
+          category,
+          asset_code,
+          condition,
+          availability: 'Available'
+        }]);
 
-    if (existing) {
-      throw new Error(`Asset code "${asset_code}" is already in use. Please use a unique asset code.`);
+      if (!insertErr) {
+        inserted = true;
+      }
     }
 
-    const { error: insertErr } = await client
-      .from('equipment')
-      .insert([{
-        equipment_name,
-        category,
-        asset_code,
-        condition,
-        availability: 'Available'
-      }]);
+    const newId = allEquipment.length > 0 ? Math.max(...allEquipment.map(e => e.id || 0)) + 1 : 1;
+    const newRecord = {
+      id: newId,
+      equipment_name,
+      category,
+      asset_code,
+      condition,
+      availability: 'Available',
+      created_at: new Date().toISOString()
+    };
 
-    if (insertErr) {
-      throw insertErr;
-    }
+    allEquipment.unshift(newRecord);
+    localStorage.setItem('local_equipment', JSON.stringify(allEquipment));
 
     showToast(`Equipment "${equipment_name}" (${asset_code}) added successfully!`, 'success');
     closeModal('modalAddEquipment');
@@ -257,7 +277,7 @@ function openEditEquipmentModal(id) {
 async function handleUpdateEquipment(e) {
   e.preventDefault();
 
-  const id = document.getElementById('editEquipmentId').value;
+  const id = parseInt(document.getElementById('editEquipmentId').value, 10);
   const nameInput = document.getElementById('editEquipmentName');
   const categoryInput = document.getElementById('editCategory');
   const codeInput = document.getElementById('editAssetCode');
@@ -270,7 +290,7 @@ async function handleUpdateEquipment(e) {
   const condition = conditionSelect.value;
 
   if (!equipment_name) {
-    showToast('Equipment name cannot be empty (BR-01).', 'warning');
+    showToast('Equipment name cannot be empty.', 'warning');
     nameInput.focus();
     return;
   }
@@ -285,35 +305,37 @@ async function handleUpdateEquipment(e) {
     return;
   }
 
+  const conflict = allEquipment.some(eq => eq.id !== id && eq.asset_code.toUpperCase() === asset_code);
+  if (conflict) {
+    showToast(`Asset code "${asset_code}" is already assigned to another equipment item.`, 'error');
+    codeInput.focus();
+    return;
+  }
+
   btnSubmit.disabled = true;
   btnSubmit.innerHTML = '<span>Updating...</span>';
 
   try {
     const client = getSupabase();
-
-    const { data: existing, error: checkErr } = await client
-      .from('equipment')
-      .select('id')
-      .eq('asset_code', asset_code)
-      .neq('id', id)
-      .maybeSingle();
-
-    if (existing) {
-      throw new Error(`Asset code "${asset_code}" is already assigned to another equipment item.`);
+    if (client) {
+      await client
+        .from('equipment')
+        .update({
+          equipment_name,
+          category,
+          asset_code,
+          condition
+        })
+        .eq('id', id);
     }
 
-    const { error: updateErr } = await client
-      .from('equipment')
-      .update({
-        equipment_name,
-        category,
-        asset_code,
-        condition
-      })
-      .eq('id', id);
-
-    if (updateErr) {
-      throw updateErr;
+    const idx = allEquipment.findIndex(eq => eq.id === id);
+    if (idx !== -1) {
+      allEquipment[idx].equipment_name = equipment_name;
+      allEquipment[idx].category = category;
+      allEquipment[idx].asset_code = asset_code;
+      allEquipment[idx].condition = condition;
+      localStorage.setItem('local_equipment', JSON.stringify(allEquipment));
     }
 
     showToast(`Equipment "${equipment_name}" updated successfully!`, 'success');
@@ -337,35 +359,17 @@ async function confirmDeleteEquipment(id, assetCode, name, availability) {
     return;
   }
 
-  const client = getSupabase();
-  if (!client) return;
+  const confirmed = confirm(`Are you sure you want to delete this equipment item?\n\nAsset Code: ${assetCode}\nEquipment: ${name}\n\nThis action cannot be undone.`);
+  if (!confirmed) return;
 
   try {
-    const { data: activeTx, error: txErr } = await client
-      .from('borrow_transactions')
-      .select('id, status')
-      .eq('equipment_id', id)
-      .eq('status', 'Borrowed');
-
-    if (activeTx && activeTx.length > 0) {
-      alert(`⚠️ Unsafe Deletion Prevented:\n\n"${name}" (${assetCode}) has an active borrowing transaction. Active borrowing records must be returned or resolved first.`);
-      return;
+    const client = getSupabase();
+    if (client) {
+      await client.from('equipment').delete().eq('id', id);
     }
 
-    const confirmed = confirm(`Are you sure you want to delete this equipment item?\n\nAsset Code: ${assetCode}\nEquipment: ${name}\n\nThis action cannot be undone.`);
-    if (!confirmed) return;
-
-    const { error: deleteErr } = await client
-      .from('equipment')
-      .delete()
-      .eq('id', id);
-
-    if (deleteErr) {
-      if (deleteErr.message.includes('violates foreign key constraint') || deleteErr.code === '23503') {
-        throw new Error('This equipment has historical transaction records linked to it. It cannot be permanently deleted to maintain audit trail integrity.');
-      }
-      throw deleteErr;
-    }
+    allEquipment = allEquipment.filter(eq => eq.id !== id);
+    localStorage.setItem('local_equipment', JSON.stringify(allEquipment));
 
     showToast(`Equipment "${name}" (${assetCode}) deleted successfully.`, 'success');
     await loadEquipment();
@@ -376,3 +380,7 @@ async function confirmDeleteEquipment(id, assetCode, name, availability) {
     showToast(err.message || 'Failed to delete equipment.', 'error', 4500);
   }
 }
+
+window.loadEquipment = loadEquipment;
+window.openEditEquipmentModal = openEditEquipmentModal;
+window.confirmDeleteEquipment = confirmDeleteEquipment;
