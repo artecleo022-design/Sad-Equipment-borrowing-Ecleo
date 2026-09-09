@@ -16,9 +16,9 @@
       <p>Agusan Del Sur State College of Agriculture and Technology</p>
     </div>
 
-    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; background: #f1f5f9; padding: 4px; border-radius: 8px;">
-      <button type="button" id="tabLoginBtn" class="btn btn-primary btn-sm" style="flex: 1;">Sign In</button>
-      <button type="button" id="tabRegisterBtn" class="btn btn-secondary btn-sm" style="flex: 1;">Register</button>
+    <div class="auth-tab-bar">
+      <button type="button" id="tabLoginBtn" class="auth-tab-btn active">Sign In</button>
+      <button type="button" id="tabRegisterBtn" class="auth-tab-btn">Register</button>
     </div>
 
     <div id="loginAlert" class="alert d-none" role="alert"></div>
@@ -43,13 +43,14 @@
           type="password" 
           id="loginPassword" 
           class="form-control" 
+          value="admin"
           placeholder="admin" 
           required 
           autocomplete="current-password"
         >
       </div>
 
-      <button type="submit" id="btnLogin" class="btn btn-primary btn-block" style="padding: 0.8rem; font-size: 1rem;">
+      <button type="submit" id="btnLogin" class="btn btn-primary btn-block" style="padding: 0.85rem; font-size: 1rem;">
         <span id="loginBtnText">Sign In to Dashboard</span>
         <span id="loginSpinner" class="loading-spinner d-none"></span>
       </button>
@@ -89,7 +90,7 @@
         >
       </div>
 
-      <button type="submit" id="btnRegister" class="btn btn-success btn-block" style="padding: 0.8rem; font-size: 1rem;">
+      <button type="submit" id="btnRegister" class="btn btn-success btn-block" style="padding: 0.85rem; font-size: 1rem;">
         <span id="regBtnText">Create Custodian Account</span>
         <span id="regSpinner" class="loading-spinner d-none"></span>
       </button>
@@ -101,7 +102,7 @@
 
     <div id="configSection" class="config-box d-none">
       <h4>Supabase Project Credentials</h4>
-      <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem;">
+      <p style="font-size: 0.75rem; color: #831843; margin-bottom: 0.5rem;">
         Enter your Supabase Project URL and Public Anon Key.
       </p>
       <div class="form-group" style="margin-bottom: 0.5rem;">

@@ -2,7 +2,7 @@ const DEFAULT_SUPABASE_URL =
     'https://nxajjznhwgmpifzmwnlb.supabase.co';
 
 const DEFAULT_SUPABASE_ANON_KEY =
-    'YOUR_SUPABASE_PUBLISHABLE_KEY';
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54YWpqem5od2dtcGlmem13bmxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MDE3OTIsImV4cCI6MjEwNDQ3Nzc5Mn0.V8k9p51-Xaw4BUosRixPL39kGQ4eQ9s1rXTfcrs1--0';
 
 const SUPABASE_URL =
     localStorage.getItem('supabase_url') ||
