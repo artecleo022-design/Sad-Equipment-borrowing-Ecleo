@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 560" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .entity-box { fill: #ffffff; stroke: #334155; stroke-width: 2; rx: 8; }
+      .header-eq { fill: #1e3a8a; }
+      .header-tx { fill: #0f766e; }
+      .header-text { font-family: system-ui, sans-serif; font-size: 15px; font-weight: bold; fill: #ffffff; text-anchor: middle; dominant-baseline: central; }
+      .field-text { font-family: 'Consolas', monospace, sans-serif; font-size: 13px; fill: #1e293b; }
+      .pk-fk { font-weight: bold; fill: #b91c1c; }
+      .fk { font-weight: bold; fill: #0284c7; }
+      .rel-line { stroke: #2563eb; stroke-width: 2.5; stroke-dasharray: 6 3; }
+      .rel-label { font-family: system-ui, sans-serif; font-size: 12px; font-weight: bold; fill: #1e3a8a; }
+    </style>
+  </defs>
+
+  <rect width="100%" height="100%" class="bg" />
+
+  <!-- Entity 1: EQUIPMENT -->
+  <g transform="translate(50, 60)">
+    <rect x="0" y="0" width="340" height="380" class="entity-box" />
+    <rect x="0" y="0" width="340" height="40" class="header-eq" rx="8" />
+    <rect x="0" y="30" width="340" height="10" class="header-eq" />
+    <text x="170" y="20" class="header-text">EQUIPMENT (Parent)</text>
+
+    <!-- Fields -->
+    <text x="20" y="70" class="field-text"><tspan class="pk-fk">PK  id</tspan> : BIGINT (IDENTITY)</text>
+    <line x1="10" y1="85" x2="330" y2="85" stroke="#e2e8f0" />
+    <text x="20" y="115" class="field-text">    equipment_name : TEXT (NOT NULL)</text>
+    <text x="20" y="150" class="field-text">    category : TEXT (NOT NULL)</text>
+    <text x="20" y="185" class="field-text"><tspan style="font-weight:bold; fill:#d97706;">UK  asset_code</tspan> : TEXT (UNIQUE, NOT NULL)</text>
+    <text x="20" y="220" class="field-text">    condition : TEXT (DEFAULT 'Good')</text>
+    <text x="20" y="255" class="field-text">    availability : TEXT (DEFAULT 'Available')</text>
+    <text x="20" y="290" class="field-text">    created_at : TIMESTAMPTZ (NOW())</text>
+  </g>
+
+  <!-- Entity 2: BORROW_TRANSACTIONS -->
+  <g transform="translate(550, 40)">
+    <rect x="0" y="0" width="360" height="460" class="entity-box" />
+    <rect x="0" y="0" width="360" height="40" class="header-tx" rx="8" />
+    <rect x="0" y="30" width="360" height="10" class="header-tx" />
+    <text x="180" y="20" class="header-text">BORROW_TRANSACTIONS (Child)</text>
+
+    <!-- Fields -->
+    <text x="20" y="70" class="field-text"><tspan class="pk-fk">PK  id</tspan> : BIGINT (IDENTITY)</text>
+    <text x="20" y="105" class="field-text"><tspan class="fk">FK  equipment_id</tspan> : BIGINT → equipment(id)</text>
+    <line x1="10" y1="120" x2="350" y2="120" stroke="#e2e8f0" />
+    <text x="20" y="145" class="field-text">    borrower_name : TEXT (NOT NULL)</text>
+    <text x="20" y="180" class="field-text">    borrower_type : TEXT (Student/Faculty/Staff)</text>
+    <text x="20" y="215" class="field-text">    department : TEXT (NOT NULL)</text>
+    <text x="20" y="250" class="field-text">    date_borrowed : DATE (CURRENT_DATE)</text>
+    <text x="20" y="285" class="field-text">    due_date : DATE (NOT NULL)</text>
+    <text x="20" y="320" class="field-text">    date_returned : DATE (NULLABLE)</text>
+    <text x="20" y="355" class="field-text">    status : TEXT (DEFAULT 'Borrowed')</text>
+    <text x="20" y="390" class="field-text"><tspan class="fk">FK  user_id</tspan> : UUID → auth.users(id)</text>
+    <text x="20" y="425" class="field-text">    created_at : TIMESTAMPTZ (NOW())</text>
+  </g>
+
+  <!-- Relationship Connector Line -->
+  <path d="M 390 130 L 470 130 L 470 145 L 550 145" fill="none" class="rel-line" />
+  <!-- Cardinality symbols: '1' at Equipment, 'Many' at Transactions -->
+  <circle cx="395" cy="130" r="4" fill="#1e3a8a" />
+  <text x="405" y="122" class="rel-label">1 (One)</text>
+
+  <!-- Crow's foot / Many branches -->
+  <line x1="535" y1="135" x2="550" y2="145" stroke="#2563eb" stroke-width="2.5" />
+  <line x1="535" y1="155" x2="550" y2="145" stroke="#2563eb" stroke-width="2.5" />
+  <text x="478" y="165" class="rel-label">N (Many)</text>
+
+  <rect x="420" y="220" width="100" height="30" fill="#eff6ff" stroke="#3b82f6" rx="4" />
+  <text x="470" y="240" font-family="system-ui, sans-serif" font-size="11px" font-weight="bold" fill="#1e3a8a" text-anchor="middle">1 : N Relation</text>
+
+</svg>

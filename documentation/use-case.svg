@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 650" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .system-box { fill: #ffffff; stroke: #3b82f6; stroke-width: 2; rx: 12; }
+      .system-title { font-family: system-ui, sans-serif; font-size: 16px; font-weight: bold; fill: #1e3a8a; }
+      .actor-circle { fill: #1e3a8a; stroke: #0f172a; stroke-width: 2; }
+      .actor-text { font-family: system-ui, sans-serif; font-size: 13px; font-weight: bold; fill: #0f172a; text-anchor: middle; }
+      .usecase-oval { fill: #eff6ff; stroke: #2563eb; stroke-width: 1.5; rx: 20; ry: 20; }
+      .usecase-text { font-family: system-ui, sans-serif; font-size: 12px; font-weight: 600; fill: #1e293b; text-anchor: middle; dominant-baseline: central; }
+      .line { stroke: #64748b; stroke-width: 1.5; }
+    </style>
+  </defs>
+
+  <rect width="100%" height="100%" class="bg" />
+
+  <!-- System Boundary -->
+  <rect x="250" y="30" width="600" height="590" class="system-box" />
+  <text x="550" y="60" class="system-title" text-anchor="middle">Equipment Borrowing and Return Monitoring System</text>
+
+  <!-- Actor (System User / Custodian) -->
+  <g transform="translate(100, 310)">
+    <!-- Stick Figure -->
+    <circle cx="0" cy="-30" r="16" class="actor-circle" fill="#1e3a8a" />
+    <line x1="0" y1="-14" x2="0" y2="25" stroke="#1e3a8a" stroke-width="3" />
+    <line x1="-20" y1="-2" x2="20" y2="-2" stroke="#1e3a8a" stroke-width="3" />
+    <line x1="0" y1="25" x2="-18" y2="55" stroke="#1e3a8a" stroke-width="3" />
+    <line x1="0" y1="25" x2="18" y2="55" stroke="#1e3a8a" stroke-width="3" />
+    <text x="0" y="75" class="actor-text">System User /</text>
+    <text x="0" y="92" class="actor-text">Equipment Custodian</text>
+  </g>
+
+  <!-- Use Cases (Left Column) -->
+  <!-- UC 1: Login -->
+  <line x1="120" y1="310" x2="330" y2="100" class="line" />
+  <rect x="330" y="80" width="180" height="40" class="usecase-oval" />
+  <text x="420" y="100" class="usecase-text">Login</text>
+
+  <!-- UC 2: View Dashboard -->
+  <line x1="120" y1="310" x2="330" y2="150" class="line" />
+  <rect x="330" y="130" width="180" height="40" class="usecase-oval" />
+  <text x="420" y="150" class="usecase-text">View Dashboard</text>
+
+  <!-- UC 3: Add Equipment -->
+  <line x1="120" y1="310" x2="330" y2="200" class="line" />
+  <rect x="330" y="180" width="180" height="40" class="usecase-oval" />
+  <text x="420" y="200" class="usecase-text">Add Equipment</text>
+
+  <!-- UC 4: View Equipment -->
+  <line x1="120" y1="310" x2="330" y2="250" class="line" />
+  <rect x="330" y="230" width="180" height="40" class="usecase-oval" />
+  <text x="420" y="250" class="usecase-text">View Equipment</text>
+
+  <!-- UC 5: Edit Equipment -->
+  <line x1="120" y1="310" x2="330" y2="300" class="line" />
+  <rect x="330" y="280" width="180" height="40" class="usecase-oval" />
+  <text x="420" y="300" class="usecase-text">Edit Equipment</text>
+
+  <!-- UC 6: Delete Equipment -->
+  <line x1="120" y1="310" x2="330" y2="350" class="line" />
+  <rect x="330" y="330" width="180" height="40" class="usecase-oval" />
+  <text x="420" y="350" class="usecase-text">Delete Equipment</text>
+
+  <!-- UC 7: Search Equipment -->
+  <line x1="120" y1="310" x2="330" y2="400" class="line" />
+  <rect x="330" y="380" width="180" height="40" class="usecase-oval" />
+  <text x="420" y="400" class="usecase-text">Search Equipment</text>
+
+  <!-- Use Cases (Right Column) -->
+  <!-- UC 8: Record Borrowing -->
+  <line x1="120" y1="310" x2="620" y2="120" class="line" />
+  <rect x="620" y="100" width="180" height="40" class="usecase-oval" />
+  <text x="710" y="120" class="usecase-text">Record Borrowing</text>
+
+  <!-- UC 9: View Transactions -->
+  <line x1="120" y1="310" x2="620" y2="180" class="line" />
+  <rect x="620" y="160" width="180" height="40" class="usecase-oval" />
+  <text x="710" y="180" class="usecase-text">View Transactions</text>
+
+  <!-- UC 10: Return Equipment -->
+  <line x1="120" y1="310" x2="620" y2="240" class="line" />
+  <rect x="620" y="220" width="180" height="40" class="usecase-oval" />
+  <text x="710" y="240" class="usecase-text">Return Equipment</text>
+
+  <!-- UC 11: Search Transactions -->
+  <line x1="120" y1="310" x2="620" y2="300" class="line" />
+  <rect x="620" y="280" width="180" height="40" class="usecase-oval" />
+  <text x="710" y="300" class="usecase-text">Search Transactions</text>
+
+  <!-- UC 12: Filter Transactions -->
+  <line x1="120" y1="310" x2="620" y2="360" class="line" />
+  <rect x="620" y="340" width="180" height="40" class="usecase-oval" />
+  <text x="710" y="360" class="usecase-text">Filter Transactions</text>
+
+  <!-- UC 13: Logout -->
+  <line x1="120" y1="310" x2="470" y2="480" class="line" />
+  <rect x="470" y="460" width="180" height="40" class="usecase-oval" />
+  <text x="560" y="480" class="usecase-text">Logout</text>
+
+</svg>

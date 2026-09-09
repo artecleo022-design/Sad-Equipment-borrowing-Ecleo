@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Equipment Borrowing and Return Monitoring System</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-layout">
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <img src="assets/ccis-logo.jpg" alt="CCIS Logo" class="sidebar-brand-img">
+        <div class="sidebar-brand-text">
+          <h2>CCIS EquipMonitor</h2>
+          <span>ASSCAT Lab Portal</span>
+        </div>
+      </div>
+
+      <ul class="nav-list">
+        <li class="nav-item">
+          <a class="nav-link active" data-tab="dashboardTab" id="navDashboard">
+            <span class="nav-icon">📊</span>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-tab="equipmentTab" id="navEquipment">
+            <span class="nav-icon">📦</span>
+            <span>Equipment</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-tab="transactionsTab" id="navTransactions">
+            <span class="nav-icon">📋</span>
+            <span>Borrowing Transactions</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <div class="user-badge">
+          <div class="user-avatar" id="currentUserAvatar">U</div>
+          <div class="user-details">
+            <div class="user-role">System Custodian</div>
+            <div class="user-email" id="currentUserEmail">admin</div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-outline-danger btn-sm btn-block" id="btnLogout">
+          🚪 Logout
+        </button>
+      </div>
+    </aside>
+
+    <div class="main-wrapper">
+
+      <header class="top-navbar">
+        <div style="display:flex; align-items:center; gap: 1rem;">
+          <button type="button" class="mobile-menu-btn" id="mobileMenuToggle" aria-label="Toggle navigation">
+            ☰
+          </button>
+          <div class="page-title">
+            <h2 id="currentViewTitle">Dashboard Overview</h2>
+            <p id="currentViewSubtitle">Real-time equipment availability and borrowing status</p>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <span style="font-size: 0.85rem; color: var(--text-secondary);" id="liveClock"></span>
+        </div>
+      </header>
+
+      <main class="main-content">
+
+        <section id="dashboardTab" class="tab-panel active">
+          
+          <div class="stats-grid">
+            <div class="stat-card total">
+              <div class="stat-info">
+                <h3>Total Equipment</h3>
+                <div class="stat-value" id="statTotalEquipment">0</div>
+              </div>
+              <div class="stat-icon">📦</div>
+            </div>
+
+            <div class="stat-card available">
+              <div class="stat-info">
+                <h3>Available</h3>
+                <div class="stat-value" id="statAvailableEquipment" style="color: var(--success-color);">0</div>
+              </div>
+              <div class="stat-icon">✅</div>
+            </div>
+
+            <div class="stat-card borrowed">
+              <div class="stat-info">
+                <h3>Borrowed</h3>
+                <div class="stat-value" id="statBorrowedEquipment" style="color: var(--warning-color);">0</div>
+              </div>
+              <div class="stat-icon">⏳</div>
+            </div>
+
+            <div class="stat-card returned">
+              <div class="stat-info">
+                <h3>Returned</h3>
+                <div class="stat-value" id="statReturnedTransactions" style="color: var(--info-color);">0</div>
+              </div>
+              <div class="stat-icon">🔄</div>
+            </div>
+
+            <div class="stat-card overdue">
+              <div class="stat-info">
+                <h3>Overdue</h3>
+                <div class="stat-value" id="statOverdueEquipment" style="color: var(--danger-color);">0</div>
+              </div>
+              <div class="stat-icon">⚠️</div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid">
+            <div id="overdueAlertBanner" class="alert alert-danger d-none">
+              <strong>⚠️ Attention Required:</strong> <span id="overdueCountText">There are overdue borrowing transactions.</span>
+              <button class="btn btn-sm btn-danger" style="margin-left: auto;" onclick="switchTab('transactionsTab', 'Overdue')">View Overdue</button>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3>Recent Borrowing Activities</h3>
+                <button class="btn btn-outline-primary btn-sm" onclick="switchTab('transactionsTab')">
+                  View All Transactions &rarr;
+                </button>
+              </div>
+              <div class="card-body" style="padding: 0;">
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Asset Code</th>
+                        <th>Equipment Name</th>
+                        <th>Borrower</th>
+                        <th>Department</th>
+                        <th>Date Borrowed</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dashboardRecentTableBody">
+                      <tr>
+                        <td colspan="7" class="text-center" style="padding: 2rem; color: var(--text-muted);">
+                          Loading recent transactions...
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="equipmentTab" class="tab-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>Equipment Inventory</h3>
+              <button type="button" class="btn btn-primary" id="btnOpenAddEquipmentModal">
+                ➕ Add Equipment
+              </button>
+            </div>
+            <div class="card-body">
+
+              <div class="table-toolbar">
+                <div class="search-filter-group">
+                  <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input 
+                      type="text" 
+                      id="equipmentSearchInput" 
+                      class="form-control" 
+                      placeholder="Search equipment name or asset code..."
+                    >
+                  </div>
+                  <select id="equipmentFilterSelect" class="form-select filter-select">
+                    <option value="All">All Availability</option>
+                    <option value="Available">Available Only</option>
+                    <option value="Borrowed">Borrowed Only</option>
+                  </select>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnRefreshEquipment">
+                  🔄 Refresh List
+                </button>
+              </div>
+
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Asset Code</th>
+                      <th>Equipment Name</th>
+                      <th>Category</th>
+                      <th>Condition</th>
+                      <th>Availability</th>
+                      <th style="text-align: right;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="equipmentTableBody">
+                    <tr>
+                      <td colspan="6" class="text-center" style="padding: 2rem; color: var(--text-muted);">
+                        Loading equipment catalog...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <section id="transactionsTab" class="tab-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3>Borrowing &amp; Return Logs</h3>
+              <button type="button" class="btn btn-primary" id="btnOpenBorrowModal">
+                ➕ Record Borrowing
+              </button>
+            </div>
+            <div class="card-body">
+
+              <div class="table-toolbar">
+                <div class="search-filter-group">
+                  <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input 
+                      type="text" 
+                      id="transactionSearchInput" 
+                      class="form-control" 
+                      placeholder="Search borrower, asset code, or equipment..."
+                    >
+                  </div>
+                  <select id="transactionFilterSelect" class="form-select filter-select">
+                    <option value="All">All Statuses</option>
+                    <option value="Borrowed">Active (Borrowed)</option>
+                    <option value="Returned">Returned</option>
+                    <option value="Overdue">Overdue Only</option>
+                  </select>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnRefreshTransactions">
+                  🔄 Refresh Transactions
+                </button>
+              </div>
+
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Asset Code</th>
+                      <th>Equipment</th>
+                      <th>Borrower</th>
+                      <th>Type</th>
+                      <th>Department</th>
+                      <th>Date Borrowed</th>
+                      <th>Due Date</th>
+                      <th>Date Returned</th>
+                      <th>Status</th>
+                      <th style="text-align: right;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="transactionsTableBody">
+                    <tr>
+                      <td colspan="10" class="text-center" style="padding: 2rem; color: var(--text-muted);">
+                        Loading transaction logs...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modalAddEquipment">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Add New Equipment</h3>
+        <button type="button" class="modal-close" onclick="closeModal('modalAddEquipment')">&times;</button>
+      </div>
+      <form id="formAddEquipment" novalidate>
+        <div class="modal-body">
+          <div class="form-group mb-2">
+            <label for="addEquipmentName" class="form-label">Equipment Name <span class="required-star">*</span></label>
+            <input type="text" id="addEquipmentName" class="form-control" placeholder="e.g., Epson Projector" required>
+          </div>
+          <div class="form-group mb-2">
+            <label for="addCategory" class="form-label">Category <span class="required-star">*</span></label>
+            <input type="text" id="addCategory" class="form-control" placeholder="e.g., Projector, Laptop, Camera" required>
+          </div>
+          <div class="form-group mb-2">
+            <label for="addAssetCode" class="form-label">Asset Code <span class="required-star">*</span></label>
+            <input type="text" id="addAssetCode" class="form-control" placeholder="e.g., PROJ-001" required>
+            <small style="font-size: 0.75rem; color: var(--text-muted);">Must be unique across all equipment.</small>
+          </div>
+          <div class="form-group mb-2">
+            <label for="addCondition" class="form-label">Condition</label>
+            <select id="addCondition" class="form-select">
+              <option value="Good" selected>Good</option>
+              <option value="Fair">Fair</option>
+              <option value="Needs Repair">Needs Repair</option>
+              <option value="Damaged">Damaged</option>
+            </select>
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label">Initial Availability</label>
+            <input type="text" class="form-control" value="Available" disabled>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modalAddEquipment')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitAddEquipment">
+            <span>Save Equipment</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modalEditEquipment">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Edit Equipment</h3>
+        <button type="button" class="modal-close" onclick="closeModal('modalEditEquipment')">&times;</button>
+      </div>
+      <form id="formEditEquipment" novalidate>
+        <input type="hidden" id="editEquipmentId">
+        <div class="modal-body">
+          <div class="form-group mb-2">
+            <label for="editEquipmentName" class="form-label">Equipment Name <span class="required-star">*</span></label>
+            <input type="text" id="editEquipmentName" class="form-control" required>
+          </div>
+          <div class="form-group mb-2">
+            <label for="editCategory" class="form-label">Category <span class="required-star">*</span></label>
+            <input type="text" id="editCategory" class="form-control" required>
+          </div>
+          <div class="form-group mb-2">
+            <label for="editAssetCode" class="form-label">Asset Code <span class="required-star">*</span></label>
+            <input type="text" id="editAssetCode" class="form-control" required>
+          </div>
+          <div class="form-group mb-2">
+            <label for="editCondition" class="form-label">Condition</label>
+            <select id="editCondition" class="form-select">
+              <option value="Good">Good</option>
+              <option value="Fair">Fair</option>
+              <option value="Needs Repair">Needs Repair</option>
+              <option value="Damaged">Damaged</option>
+            </select>
+          </div>
+          <div class="form-group mb-2">
+            <label class="form-label">Availability (Controlled by Transactions)</label>
+            <input type="text" id="editAvailability" class="form-control" disabled>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modalEditEquipment')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitEditEquipment">
+            <span>Update Equipment</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modalBorrow">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Record Borrowing Transaction</h3>
+        <button type="button" class="modal-close" onclick="closeModal('modalBorrow')">&times;</button>
+      </div>
+      <form id="formBorrow" novalidate>
+        <div class="modal-body">
+          <div class="form-group mb-2">
+            <label for="borrowEquipmentSelect" class="form-label">Select Equipment <span class="required-star">*</span></label>
+            <select id="borrowEquipmentSelect" class="form-select" required>
+              <option value="">-- Select Available Equipment --</option>
+            </select>
+            <small style="font-size: 0.75rem; color: var(--text-muted);">Only currently available items are listed.</small>
+          </div>
+
+          <div class="form-group mb-2">
+            <label for="borrowerName" class="form-label">Borrower Name <span class="required-star">*</span></label>
+            <input type="text" id="borrowerName" class="form-control" placeholder="Full name of borrower" required>
+          </div>
+
+          <div class="form-group mb-2">
+            <label for="borrowerType" class="form-label">Borrower Type <span class="required-star">*</span></label>
+            <select id="borrowerType" class="form-select" required>
+              <option value="">-- Select Type --</option>
+              <option value="Student">Student</option>
+              <option value="Faculty">Faculty</option>
+              <option value="Staff">Staff</option>
+            </select>
+          </div>
+
+          <div class="form-group mb-2">
+            <label for="borrowerDepartment" class="form-label">Department / College <span class="required-star">*</span></label>
+            <input type="text" id="borrowerDepartment" class="form-control" placeholder="e.g., Computer Science, Engineering" required>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group mb-2">
+              <label for="borrowDate" class="form-label">Date Borrowed <span class="required-star">*</span></label>
+              <input type="date" id="borrowDate" class="form-control" required>
+            </div>
+            <div class="form-group mb-2">
+              <label for="borrowDueDate" class="form-label">Due Date <span class="required-star">*</span></label>
+              <input type="date" id="borrowDueDate" class="form-control" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modalBorrow')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitBorrow">
+            <span>Confirm Borrowing</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/equipment.js"></script>
+  <script src="js/transactions.js"></script>
+
+  <script>
+    function switchTab(tabId, filterStatus) {
+      document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+
+      const targetPanel = document.getElementById(tabId);
+      if (targetPanel) {
+        targetPanel.classList.add('active');
+      }
+
+      const activeNav = document.querySelector(`[data-tab="${tabId}"]`);
+      if (activeNav) {
+        activeNav.classList.add('active');
+      }
+
+      const titleElem = document.getElementById('currentViewTitle');
+      const subtitleElem = document.getElementById('currentViewSubtitle');
+      if (tabId === 'dashboardTab') {
+        titleElem.textContent = 'Dashboard Overview';
+        subtitleElem.textContent = 'Real-time equipment availability and borrowing status';
+        if (typeof loadDashboardData === 'function') loadDashboardData();
+      } else if (tabId === 'equipmentTab') {
+        titleElem.textContent = 'Equipment Management';
+        subtitleElem.textContent = 'Add, edit, search, and monitor laboratory equipment catalog';
+        if (typeof loadEquipment === 'function') loadEquipment();
+      } else if (tabId === 'transactionsTab') {
+        titleElem.textContent = 'Borrowing & Return Transactions';
+        subtitleElem.textContent = 'Manage active borrowings, process returns, and track overdues';
+        if (filterStatus) {
+          const filterSelect = document.getElementById('transactionFilterSelect');
+          if (filterSelect) {
+            filterSelect.value = filterStatus;
+          }
+        }
+        if (typeof loadTransactions === 'function') loadTransactions();
+      }
+
+      document.getElementById('sidebar').classList.remove('open');
+    }
+
+    document.querySelectorAll('.nav-link[data-tab]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tabId = link.getAttribute('data-tab');
+        switchTab(tabId);
+      });
+    });
+
+    document.getElementById('mobileMenuToggle').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+    });
+
+    function updateClock() {
+      const clockElem = document.getElementById('liveClock');
+      if (clockElem) {
+        const now = new Date();
+        clockElem.textContent = now.toLocaleDateString('en-US', { 
+          weekday: 'short', 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        }) + ' | ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      }
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+  </script>
+
+</body>
+</html>

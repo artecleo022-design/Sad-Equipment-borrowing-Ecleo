@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login &amp; Registration - Equipment Monitoring System</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="auth-body">
+
+  <div class="auth-card">
+    <div class="auth-header">
+      <img src="assets/asscat-logo.jpg" alt="ASSCAT Logo" class="auth-logo-img">
+      <h1>Equipment Borrowing &amp; Return System</h1>
+      <p>Agusan Del Sur State College of Agriculture and Technology</p>
+    </div>
+
+    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; background: #f1f5f9; padding: 4px; border-radius: 8px;">
+      <button type="button" id="tabLoginBtn" class="btn btn-primary btn-sm" style="flex: 1;">Sign In</button>
+      <button type="button" id="tabRegisterBtn" class="btn btn-secondary btn-sm" style="flex: 1;">Register</button>
+    </div>
+
+    <div id="loginAlert" class="alert d-none" role="alert"></div>
+
+    <form id="loginForm" class="auth-form" novalidate>
+      <div class="form-group">
+        <label for="loginEmail" class="form-label">Email Address <span class="required-star">*</span></label>
+        <input 
+          type="email" 
+          id="loginEmail" 
+          class="form-control" 
+          value="admin@gmail.com"
+          placeholder="admin@gmail.com" 
+          required 
+          autocomplete="email"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="loginPassword" class="form-label">Password <span class="required-star">*</span></label>
+        <input 
+          type="password" 
+          id="loginPassword" 
+          class="form-control" 
+          placeholder="admin" 
+          required 
+          autocomplete="current-password"
+        >
+      </div>
+
+      <button type="submit" id="btnLogin" class="btn btn-primary btn-block" style="padding: 0.8rem; font-size: 1rem;">
+        <span id="loginBtnText">Sign In to Dashboard</span>
+        <span id="loginSpinner" class="loading-spinner d-none"></span>
+      </button>
+    </form>
+
+    <form id="registerForm" class="auth-form d-none" novalidate>
+      <div class="form-group">
+        <label for="regEmail" class="form-label">Email Address <span class="required-star">*</span></label>
+        <input 
+          type="email" 
+          id="regEmail" 
+          class="form-control" 
+          placeholder="admin@gmail.com" 
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="regPassword" class="form-label">Password <span class="required-star">*</span></label>
+        <input 
+          type="password" 
+          id="regPassword" 
+          class="form-control" 
+          placeholder="Minimum 6 characters" 
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="regConfirmPassword" class="form-label">Confirm Password <span class="required-star">*</span></label>
+        <input 
+          type="password" 
+          id="regConfirmPassword" 
+          class="form-control" 
+          placeholder="Re-type password" 
+          required
+        >
+      </div>
+
+      <button type="submit" id="btnRegister" class="btn btn-success btn-block" style="padding: 0.8rem; font-size: 1rem;">
+        <span id="regBtnText">Create Custodian Account</span>
+        <span id="regSpinner" class="loading-spinner d-none"></span>
+      </button>
+    </form>
+
+    <div class="auth-config-toggle">
+      <button type="button" id="toggleConfigBtn">⚙️ Configure Supabase API</button>
+    </div>
+
+    <div id="configSection" class="config-box d-none">
+      <h4>Supabase Project Credentials</h4>
+      <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem;">
+        Enter your Supabase Project URL and Public Anon Key.
+      </p>
+      <div class="form-group" style="margin-bottom: 0.5rem;">
+        <label class="form-label" style="font-size: 0.75rem;">Project URL</label>
+        <input type="text" id="configUrl" class="form-control" style="font-size: 0.8rem;" placeholder="https://xyzcompany.supabase.co">
+      </div>
+      <div class="form-group" style="margin-bottom: 0.75rem;">
+        <label class="form-label" style="font-size: 0.75rem;">Anon / Public API Key</label>
+        <input type="password" id="configKey" class="form-control" style="font-size: 0.8rem;" placeholder="eyJhbGciOi...">
+      </div>
+      <div style="display:flex; gap:0.5rem;">
+        <button type="button" id="btnSaveConfig" class="btn btn-primary btn-sm" style="flex:1;">Save Settings</button>
+        <button type="button" id="btnResetConfig" class="btn btn-secondary btn-sm">Reset</button>
+      </div>
+    </div>
+
+    <div style="margin-top: 1.5rem; text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+      <p>&copy; Systems Analysis and Design &bull; CCIS Laboratory</p>
+    </div>
+  </div>
+
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+
+</body>
+</html>
